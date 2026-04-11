@@ -6,6 +6,8 @@ from processor import process_image, trace_fiber, compute_fiber_metrics, analyze
 from storage import save_data, get_mask, get_dist_map, save_fiber, get_fibers, get_particle_mask, save_pixel_size, get_pixel_size
 from tifffile import TiffFile
 import re
+import time
+from fastapi import BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 app = FastAPI()
@@ -31,8 +33,30 @@ app.mount("/output", StaticFiles(directory="outputs"), name="output")
 # ===============================
 # 1. Upload & Process
 # ===============================
+
+def process_upload(image_path, image_id):
+    output_folder = os.path.join(OUTPUT_DIR, image_id)
+    os.makedirs(output_folder, exist_ok=True)
+
+    # 🔥 HEAVY WORK HERE
+    result = process_image(image_path, output_folder)
+
+    save_data(
+        image_id,
+        result["mask"],
+        result["dist_map"],
+        result["particle_mask"]
+    )
+
+    generate_particle_images(
+        result["orig"],
+        result["particle_mask"],
+        output_folder
+    )
+    time.sleep(0.5)
+    
 @app.post("/upload")
-async def upload(file: UploadFile = File(...)):
+async def upload(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     image_id = str(uuid.uuid4())
 
     image_path = os.path.join(OUTPUT_DIR, f"{image_id}.tif")
@@ -40,34 +64,13 @@ async def upload(file: UploadFile = File(...)):
     with open(image_path, "wb") as f:
         f.write(await file.read())
 
-    # 🔥 ADD THIS HERE
-    output_folder = os.path.join(OUTPUT_DIR, image_id)
-    os.makedirs(output_folder, exist_ok=True)
-    result = process_image(image_path, output_folder)
-# 🔥 CHANGE THIS LINE
-
-    save_data(
-        image_id,
-        result["mask"],
-        result["dist_map"],
-        result["particle_mask"]   # 🔥 ADD THIS
-    )
-
-    # 🔥 ADD THIS
-    generate_particle_images(result["orig"], result["particle_mask"], output_folder)
+    background_tasks.add_task(process_upload, image_path, image_id)
 
 
 
     with TiffFile(image_path) as tif:
-        image = tif.asarray()
         page = tif.pages[0]
-
-        print("\n========== TIFF METADATA ==========")
-        for tag in page.tags.values():
-            print(tag.name, ":", tag.value)
-        print("==================================\n")
-
-        resolution = image.shape
+        resolution = (page.imagelength, page.imagewidth)
 
         pixel_size = None
 
