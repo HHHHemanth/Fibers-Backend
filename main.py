@@ -388,3 +388,11 @@ def clear_fibers(data: dict):
     save_data(image_id, get_mask(image_id), get_dist_map(image_id), get_particle_mask(image_id))
     
     return {"status": "cleared"}
+
+@app.get("/status/{image_id}")
+def status(image_id: str):
+    mask = get_mask(image_id)
+
+    return {
+        "ready": mask is not None
+    }
