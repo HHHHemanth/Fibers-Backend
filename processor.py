@@ -18,6 +18,8 @@ import os
 import matplotlib.pyplot as plt
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from datetime import datetime
 # =============================
 # A* TRACE (same as yours)
 # =============================
@@ -529,7 +531,7 @@ def generate_pdf(output_folder, fibers, particles):
 
     styles = getSampleStyleSheet()
     elements = []
-    elements.append(Spacer(1, 80))
+    elements.append(Spacer(1, 20))
 
     # ✅ REPORT TITLE
     elements.append(Paragraph(
@@ -537,6 +539,27 @@ def generate_pdf(output_folder, fibers, particles):
         styles['Title']
     ))
     elements.append(Spacer(1, 20))
+    timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    elements.append(
+    Paragraph(
+        f"<font size=10>Generated Report at: {timestamp}</font>",
+        styles["Normal"]
+    )
+)
+    elements.append(Spacer(1, 10))
+
+
+    def add_footer(canvas, doc):
+        width, height = doc.pagesize
+
+        # line
+        canvas.setStrokeColor(colors.grey)
+        canvas.setLineWidth(0.5)
+        canvas.line(40, 40, width - 40, 40)
+
+        # optional page number
+        canvas.setFont("Helvetica", 8)
+        canvas.drawRightString(width - 40, 25, f"Page {doc.page}")
 
     def add_image(title, filename):
         path = os.path.join(output_folder, filename)
@@ -673,9 +696,18 @@ def generate_pdf(output_folder, fibers, particles):
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
     ]))
 
+    def first_page_with_footer(canvas, doc):
+        first_page(canvas, doc)   # header
+        add_footer(canvas, doc)   # footer
 
-    doc.build(elements, onFirstPage=first_page, onLaterPages=later_pages)
+    def later_pages_with_footer(canvas, doc):
+        add_footer(canvas, doc)   # only footer
 
+    doc.build(
+        elements,
+        onFirstPage=first_page_with_footer,
+        onLaterPages=later_pages_with_footer
+    )
     return pdf_path
 
 def save_fiber_image(orig, fibers, output_folder):
