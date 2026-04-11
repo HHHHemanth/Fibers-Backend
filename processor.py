@@ -499,23 +499,29 @@ def generate_histograms(fibers, particles, output_folder):
 
     # particle inner
     inner = [p["inner_d"] for p in particles]
+    plt.figure()
+
     if inner:
-        plt.figure()
         plt.hist(inner, bins=20)
         plt.title("Particle Inner Diameter")
-        plt.grid()
-        plt.savefig(os.path.join(output_folder, "particle_inner_hist.png"))
-        plt.close()
+    else:
+        plt.text(0.5, 0.5, "No particle data", ha='center', va='center')
+
+    plt.savefig(os.path.join(output_folder, "particle_inner_hist.png"))
+    plt.close()
 
     # particle outer
     outer = [p["outer_d"] for p in particles]
+    plt.figure()
+
     if outer:
-        plt.figure()
         plt.hist(outer, bins=20)
         plt.title("Particle Outer Diameter")
-        plt.grid()
-        plt.savefig(os.path.join(output_folder, "particle_outer_hist.png"))
-        plt.close()
+    else:
+        plt.text(0.5, 0.5, "No particle data", ha='center', va='center')
+
+    plt.savefig(os.path.join(output_folder, "particle_outer_hist.png"))
+    plt.close()
 
 def generate_pdf(output_folder, fibers, particles):
     pdf_path = os.path.join(output_folder, "report.pdf")
